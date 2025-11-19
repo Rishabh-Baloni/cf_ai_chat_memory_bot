@@ -1,0 +1,11 @@
+* { box-sizing: border-box; }
+body { margin: 0; font-family: system-ui, sans-serif; background: #0b1220; color: #f0f3f7; }
+.app { max-width: 800px; margin: 0 auto; padding: 24px; }
+h1 { margin: 0 0 16px 0; font-size: 20px; }
+.messages { height: 60vh; overflow-y: auto; border: 1px solid #243047; border-radius: 8px; padding: 12px; background: #0e1628; }
+.messages .user { background: #18324f; padding: 8px 10px; border-radius: 6px; margin: 6px 0; }
+.messages .assistant { background: #12233a; padding: 8px 10px; border-radius: 6px; margin: 6px 0; }
+.input { display: flex; gap: 8px; margin-top: 12px; }
+input { flex: 1; padding: 10px; border-radius: 6px; border: 1px solid #243047; background: #0e1628; color: #f0f3f7; }
+button { padding: 10px 12px; border-radius: 6px; border: 1px solid #243047; background: #1a2942; color: #f0f3f7; cursor: pointer; }
+button:hover { background: #203255; }
