@@ -3,6 +3,7 @@ const inputEl = document.getElementById("text");
 const sendEl = document.getElementById("send");
 const clearEl = document.getElementById("clear");
 let sessionId = localStorage.getItem("sessionId") || "";
+const clientHistory = [];
 function add(role, text) {
   const d = document.createElement("div");
   d.className = role;
@@ -17,8 +18,11 @@ async function send() {
   inputEl.value = "";
   const useBrowser = document.getElementById("browser").checked;
   if (useBrowser && window.browserLLMGenerate) {
-    const gen = await window.browserLLMGenerate(text);
+    const sys = { role: "system", content: "You are a helpful assistant." };
+    clientHistory.push({ role: "user", content: text });
+    const gen = await window.browserLLMGenerate([sys, ...clientHistory]);
     add("assistant", gen || "");
+    clientHistory.push({ role: "assistant", content: gen || "" });
   } else {
     const r = await fetch("/api/chat", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ message: text, sessionId }) });
     const data = await r.json();
@@ -33,6 +37,7 @@ async function clearMemory() {
   if (!sessionId) return;
   await fetch("/api/clear", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ sessionId }) });
   messagesEl.innerHTML = "";
+  clientHistory.length = 0;
 }
 sendEl.addEventListener("click", send);
 inputEl.addEventListener("keydown", e => { if (e.key === "Enter") send(); });
