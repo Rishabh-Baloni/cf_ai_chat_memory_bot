@@ -1,8 +1,8 @@
 # cf_ai_chat_memory_bot
 
-An AI-powered chat application built on Cloudflare Workers that demonstrates core architecture patterns Cloudflare looks for: Worker structure, Durable Object coordination, stateful memory, chat flow handling, prompt assembly, and a clean frontend/backend organization.
+An AI-powered chat application built on Cloudflare Workers demonstrating core architecture patterns: Worker structure, Durable Object coordination, stateful memory, chat flow handling, prompt assembly, and a clean frontend/backend organization.
 
-This project defaults to a 100% free mode using a small client-side LLM in the browser. It also includes wiring to switch to Workers AI later without large code changes.
+By default it runs in a free mode using a small client-side LLM in the browser, and it includes wiring to switch to Workers AI later without large code changes.
 
 ## Highlights
 - Worker routes: `/api/chat`, `/api/clear`, `/api/state`, plus static asset serving.
@@ -23,13 +23,12 @@ This project defaults to a 100% free mode using a small client-side LLM in the b
 - Frontend (`public/*`)
   - Minimal chat UI, local session storage, and optional client-side LLM via Transformers.js.
 
-## Free Mode vs Workers AI
-- Free Mode (default):
+## LLM Options
+- Free mode (default):
   - Uses a small browser LLM (`Xenova/gpt2`) via CDN for text generation.
-  - Durable Object still coordinates memory and session state.
-- Workers AI Mode (optional):
-  - Bind Workers AI in `wrangler.toml` and call a model like `@cf/meta/llama-3.3-8b-instruct`.
-  - Intended for accounts with Workers AI access; not required for this assignment.
+  - Durable Object coordinates memory and session state.
+- Workers AI mode (optional):
+  - Bind Workers AI in `wrangler.toml` and call a model such as `@cf/meta/llama-3.3-8b-instruct`.
 
 ## File Structure
 ```
@@ -49,7 +48,7 @@ tsconfig.json            # TypeScript options
 .gitignore               # Ignore node_modules, cache, venv, etc.
 ```
 
-## Running Locally (Windows, no Cloudflare billing)
+## Running Locally (Windows)
 - Install dependencies locally:
   - `npm install --cache .npm-cache`
 - Start dev server:
@@ -70,18 +69,18 @@ binding = "AI"
 npx wrangler login
 npx wrangler dev --remote
 ```
-Note: Remote dev may incur usage depending on your account; this is not required for the assignment.
+Note: Remote dev may incur usage depending on your account.
 
 ## Memory Model
 - Short-term: last N turns retained.
 - Rolling summary: refreshed periodically to constrain prompt size.
 - Clear memory: `/api/clear` endpoint and UI button.
 
-## Assignment Mapping
-- LLM: Browser LLM (free) counts as an “external LLM of your choice”. Workers AI integration is prepared.
+## Capabilities
+- LLM integration: client-side generation by default; Workers AI optional.
 - Workflow/coordination: Durable Object orchestrates steps and persists state.
-- User input: Chat UI with session persistence and streaming of typed messages.
-- Memory/state: Stored turns and a rolling summary per session.
+- User input: chat UI with session persistence and message streaming.
+- Memory/state: stored turns and a rolling summary per session.
 
 ## Disk Usage Rules
 - All npm cache and `node_modules` are inside this project directory (`.npm-cache`, `node_modules`). No global installs.
