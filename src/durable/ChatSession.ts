@@ -19,8 +19,15 @@ export class ChatSession {
       const system = body.system || "You are a helpful assistant.";
       const turns: StoredTurn[] = (await this.state.storage.get<StoredTurn[]>("turns")) || [];
       const summary: string | undefined = await this.state.storage.get<string>("summary");
-      const recent = turns.slice(-10).map(t => ({ role: t.role, content: t.content }));
-      const messages = buildPrompt(system, summary || null, recent, message);
+      const facts = (await this.state.storage.get<Record<string, string>>("facts")) || {};
+      const mLower = message.toLowerCase();
+      const nameMatch = mLower.match(/\bmy name is\s+([a-zA-Z][a-zA-Z\s'.-]{0,80})/);
+      const iAmMatch = mLower.match(/^\s*i am\s+([a-zA-Z][a-zA-Z\s'.-]{0,80})/);
+      if (nameMatch) facts["name"] = message.substring(nameMatch.index! + 12).trim();
+      else if (iAmMatch) facts["name"] = message.substring(iAmMatch.index! + 4).trim();
+      await this.state.storage.put("facts", facts);
+      const recent = turns.slice(-20).map(t => ({ role: t.role, content: t.content }));
+      const messages = buildPrompt(system, summary || null, recent, message, facts);
       let assistant = "";
       if (this.env.GROQ_API_KEY) {
         assistant = await groqChat(this.env.GROQ_API_KEY!, this.env.GROQ_MODEL || "openai/gpt-oss-20b", messages);
@@ -32,7 +39,7 @@ export class ChatSession {
       turns.push({ role: "assistant", content: assistant, ts: now });
       await this.state.storage.put("turns", turns);
       if (!summary || turns.length % 6 === 0) {
-        const sMessages = [{ role: "system", content: "Summarize the conversation so far concisely." }].concat(turns.slice(-20).map(t => ({ role: t.role, content: t.content })));
+      const sMessages = [{ role: "system", content: "Summarize the conversation so far concisely." }].concat(turns.slice(-20).map(t => ({ role: t.role, content: t.content })));
         if (this.env.GROQ_API_KEY) {
           const sText = await groqChat(this.env.GROQ_API_KEY!, this.env.GROQ_MODEL || "mixtral-8x7b-32768", sMessages);
           await this.state.storage.put("summary", sText);
@@ -49,8 +56,15 @@ export class ChatSession {
       const message = body.message || url.searchParams.get("message") || "";
       const turns: StoredTurn[] = (await this.state.storage.get<StoredTurn[]>("turns")) || [];
       const summary: string | undefined = await this.state.storage.get<string>("summary");
-      const recent = turns.slice(-10).map(t => ({ role: t.role, content: t.content }));
-      const messages = buildPrompt(systemParam, summary || null, recent, message);
+      const facts = (await this.state.storage.get<Record<string, string>>("facts")) || {};
+      const mLower2 = message.toLowerCase();
+      const nameMatch2 = mLower2.match(/\bmy name is\s+([a-zA-Z][a-zA-Z\s'.-]{0,80})/);
+      const iAmMatch2 = mLower2.match(/^\s*i am\s+([a-zA-Z][a-zA-Z\s'.-]{0,80})/);
+      if (nameMatch2) facts["name"] = message.substring(nameMatch2.index! + 12).trim();
+      else if (iAmMatch2) facts["name"] = message.substring(iAmMatch2.index! + 4).trim();
+      await this.state.storage.put("facts", facts);
+      const recent = turns.slice(-20).map(t => ({ role: t.role, content: t.content }));
+      const messages = buildPrompt(systemParam, summary || null, recent, message, facts);
       if (!this.env.GROQ_API_KEY) {
         const enc = new TextEncoder();
         const stream = new ReadableStream({
