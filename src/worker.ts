@@ -26,6 +26,16 @@ export default {
       const r = await stub.fetch("https://dobject/clear", { method: "POST" });
       return new Response(await r.text());
     }
+    if (url.pathname === "/api/stream" && req.method === "GET") {
+      let sessionId = url.searchParams.get("sessionId") || "";
+      const message = url.searchParams.get("message") || "";
+      const system = url.searchParams.get("system") || "You are a helpful assistant.";
+      if (!sessionId) sessionId = crypto.randomUUID();
+      const id = env.CHAT_SESSIONS.idFromName(sessionId);
+      const stub = env.CHAT_SESSIONS.get(id);
+      const r = await stub.fetch(`https://dobject/stream?system=${encodeURIComponent(system)}`, { method: "POST", body: JSON.stringify({ message }) });
+      return new Response(r.body, { status: r.status, headers: { "content-type": "text/event-stream" } });
+    }
     if (url.pathname === "/api/state" && req.method === "GET") {
       const sessionId = url.searchParams.get("sessionId") || "";
       const id = env.CHAT_SESSIONS.idFromName(sessionId);

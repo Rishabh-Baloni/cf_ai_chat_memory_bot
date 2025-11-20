@@ -15,4 +15,4 @@ new_classes = ["ChatSession"]
 
 [vars]
 USE_GROQ = "true"
-GROQ_MODEL = "llama-3.1-8b-instruct"
+GROQ_MODEL = "mixtral-8x7b-32768"
