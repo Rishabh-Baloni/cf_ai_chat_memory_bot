@@ -4,12 +4,14 @@ const sendEl = document.getElementById("send");
 const clearEl = document.getElementById("clear");
 let sessionId = localStorage.getItem("sessionId") || "";
 const clientHistory = [];
+if (window.browserLLMInit) window.browserLLMInit();
 function add(role, text) {
   const d = document.createElement("div");
   d.className = role;
   d.textContent = text;
   messagesEl.appendChild(d);
   messagesEl.scrollTop = messagesEl.scrollHeight;
+  return d;
 }
 async function send() {
   const text = inputEl.value.trim();
@@ -18,11 +20,21 @@ async function send() {
   inputEl.value = "";
   const useBrowser = document.getElementById("browser").checked;
   if (useBrowser && window.browserLLMGenerate) {
+    if (window.browserLLMIsReady && !window.browserLLMIsReady()) {
+      add("assistant", "Model is loading... first run can take a few minutes.");
+      return;
+    }
     const sys = { role: "system", content: "You are a helpful assistant." };
     clientHistory.push({ role: "user", content: text });
-    const gen = await window.browserLLMGenerate([sys, ...clientHistory]);
-    add("assistant", gen || "");
-    clientHistory.push({ role: "assistant", content: gen || "" });
+    const placeholder = add("assistant", "");
+    if (window.browserLLMGenerateStreaming) {
+      const final = await window.browserLLMGenerateStreaming([sys, ...clientHistory], (partial) => { placeholder.textContent = partial; });
+      clientHistory.push({ role: "assistant", content: final || "" });
+    } else {
+      const gen = await window.browserLLMGenerate([sys, ...clientHistory]);
+      placeholder.textContent = gen || "";
+      clientHistory.push({ role: "assistant", content: gen || "" });
+    }
   } else {
     const r = await fetch("/api/chat", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ message: text, sessionId }) });
     const data = await r.json();
