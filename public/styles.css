@@ -9,6 +9,12 @@ h1 { margin: 0 0 16px 0; font-size: 20px; }
 .messages .assistant { background: #12233a; padding: 8px 10px; border-radius: 6px; margin: 6px 0; white-space: pre-wrap; }
 pre, code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
 pre { background: #0b172a; border: 1px solid #243047; border-radius: 6px; padding: 8px; overflow-x: auto; }
+table.md-table { width: 100%; border-collapse: collapse; margin: 8px 0; }
+table.md-table th, table.md-table td { border: 1px solid #243047; padding: 6px 8px; text-align: left; }
+.messages .assistant h1 { font-size: 20px; margin: 10px 0 6px; }
+.messages .assistant h2 { font-size: 18px; margin: 10px 0 6px; }
+.messages .assistant h3 { font-size: 16px; margin: 10px 0 6px; }
+.messages .assistant blockquote { border-left: 3px solid #243047; padding-left: 10px; color: #bcd0e9; }
 .input { display: flex; gap: 8px; margin-top: 12px; }
 input { flex: 1; padding: 10px; border-radius: 6px; border: 1px solid #243047; background: #0e1628; color: #f0f3f7; }
 button { padding: 10px 12px; border-radius: 6px; border: 1px solid #243047; background: #1a2942; color: #f0f3f7; cursor: pointer; }

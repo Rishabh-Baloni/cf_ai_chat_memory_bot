@@ -64,16 +64,115 @@ async function send() {
 function escapeHtml(s) {
   return s.replace(/[&<>"]/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]));
 }
-function renderMarkdown(raw) {
-  let s = raw || "";
-  s = s.replace(/```([\s\S]*?)```/g, (m, code) => `<pre><code>${escapeHtml(code)}</code></pre>`);
-  s = escapeHtml(s);
+function inlineFormat(s) {
+  s = s.replace(/`([^`]+)`/g, (m, t) => `<code>${escapeHtml(t)}</code>`);
   s = s.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
   s = s.replace(/\*([^*]+)\*/g, "<em>$1</em>");
-  s = s.replace(/`([^`]+)`/g, "<code>$1</code>");
-  s = s.replace(/(^|\n)-\s+([^\n]+)/g, "$1• $2");
-  s = s.replace(/\n/g, "<br>");
+  s = s.replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
   return s;
+}
+function renderMarkdown(raw) {
+  const lines = (raw || "").split(/\r?\n/);
+  const out = [];
+  let inCode = false;
+  let codeLang = "";
+  let codeLines = [];
+  let inTable = false;
+  let tableRows = [];
+  let inUl = false;
+  let inOl = false;
+  let para = [];
+  function flushPara() {
+    if (para.length) {
+      const text = para.join("\n");
+      out.push(`<p>${inlineFormat(escapeHtml(text)).replace(/\n/g, '<br>')}</p>`);
+      para = [];
+    }
+  }
+  function flushList() {
+    if (inUl) { out.push('</ul>'); inUl = false; }
+    if (inOl) { out.push('</ol>'); inOl = false; }
+  }
+  function flushTable() {
+    if (!inTable) return;
+    if (tableRows.length) {
+      const header = tableRows[0];
+      const sep = tableRows[1] && /^\s*[:\-\| ]+\s*$/.test(tableRows[1]);
+      const bodyStart = sep ? 2 : 1;
+      const renderRow = (row, cellTag) => {
+        const cells = row.split('|').map(c => c.trim()).filter(c => c.length > 0);
+        return `<tr>` + cells.map(c => `<${cellTag}>${inlineFormat(escapeHtml(c))}</${cellTag}>`).join('') + `</tr>`;
+      };
+      const headerHtml = sep ? renderRow(header, 'th') : '';
+      const bodyHtml = tableRows.slice(bodyStart).map(r => renderRow(r, 'td')).join('');
+      const tableHtml = `<table class="md-table">${headerHtml ? `<thead>${headerHtml}</thead>` : ''}<tbody>${bodyHtml}</tbody></table>`;
+      out.push(tableHtml);
+    }
+    tableRows = [];
+    inTable = false;
+  }
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (inCode) {
+      if (/^```/.test(line)) {
+        const code = codeLines.join('\n');
+        out.push(`<pre><code class="lang-${escapeHtml(codeLang)}">${escapeHtml(code)}</code></pre>`);
+        inCode = false; codeLang = ""; codeLines = [];
+        continue;
+      }
+      codeLines.push(line);
+      continue;
+    }
+    if (/^```/.test(line)) {
+      flushPara(); flushList(); flushTable();
+      codeLang = line.replace(/^```\s*/, '').trim();
+      inCode = true; codeLines = [];
+      continue;
+    }
+    if (/^\s*$/.test(line)) {
+      flushPara(); flushList(); flushTable();
+      continue;
+    }
+    const heading = line.match(/^(#{1,6})\s+(.*)$/);
+    if (heading) {
+      flushPara(); flushList(); flushTable();
+      const level = heading[1].length;
+      out.push(`<h${level}>${inlineFormat(escapeHtml(heading[2]))}</h${level}>`);
+      continue;
+    }
+    if (/^>\s+/.test(line)) {
+      flushPara(); flushList(); flushTable();
+      out.push(`<blockquote>${inlineFormat(escapeHtml(line.replace(/^>\s+/, '')))}</blockquote>`);
+      continue;
+    }
+    const ul = line.match(/^\s*[-*]\s+(.*)$/);
+    if (ul) {
+      flushPara(); flushTable();
+      if (!inUl) { out.push('<ul>'); inUl = true; }
+      out.push(`<li>${inlineFormat(escapeHtml(ul[1]))}</li>`);
+      continue;
+    }
+    const ol = line.match(/^\s*\d+\.\s+(.*)$/);
+    if (ol) {
+      flushPara(); flushTable();
+      if (!inOl) { out.push('<ol>'); inOl = true; }
+      out.push(`<li>${inlineFormat(escapeHtml(ol[1]))}</li>`);
+      continue;
+    }
+    const isTableLike = line.includes('|');
+    if (isTableLike) {
+      flushPara(); flushList();
+      inTable = true; tableRows.push(line);
+      const next = lines[i + 1] || '';
+      if (!next.includes('|')) {
+        flushTable();
+      }
+      continue;
+    }
+    para.push(line);
+  }
+  flushPara(); flushList(); flushTable();
+  return out.join('\n');
 }
 async function clearMemory() {
   if (!sessionId) return;
