@@ -4,7 +4,31 @@ const sendEl = document.getElementById("send");
 const clearEl = document.getElementById("clear");
 let sessionId = localStorage.getItem("sessionId") || "";
 const clientHistory = [];
-if (window.browserLLMInit) window.browserLLMInit();
+const modelSelect = document.getElementById('model-select');
+const preloadBtn = document.getElementById('preload-btn');
+const cancelBtn = document.getElementById('cancel-preload-btn');
+const preloadPref = document.getElementById('preload-pref');
+if (modelSelect) {
+  const saved = window.getSelectedModel ? window.getSelectedModel() : modelSelect.value;
+  modelSelect.value = saved;
+  modelSelect.addEventListener('change', async () => {
+    window.setSelectedModel && window.setSelectedModel(modelSelect.value);
+    if (window.browserLLMIsReady && window.browserLLMIsReady()) {
+      const ok = confirm('Switching models will re-download. Continue?');
+      if (ok) await window.startPreload(modelSelect.value);
+    }
+  });
+}
+if (preloadPref) {
+  const stored = localStorage.getItem('preloadPref') === 'true';
+  preloadPref.checked = stored;
+  preloadPref.addEventListener('change', () => localStorage.setItem('preloadPref', preloadPref.checked ? 'true' : 'false'));
+}
+if (preloadBtn) preloadBtn.addEventListener('click', () => window.startPreload && window.startPreload(modelSelect.value));
+if (cancelBtn) cancelBtn.addEventListener('click', () => window.cancelPreload && window.cancelPreload());
+if (window.shouldAutoPreload && window.shouldAutoPreload()) {
+  window.startPreload && window.startPreload(modelSelect.value);
+}
 function add(role, text) {
   const d = document.createElement("div");
   d.className = role;

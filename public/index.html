@@ -9,6 +9,20 @@
 <body>
   <div class="app">
     <h1>cf_ai_chat_memory_bot</h1>
+    <div id="model-controls">
+      <label for="model-select">Model:</label>
+      <select id="model-select">
+        <option value="Qwen2-0.5B-Instruct" selected>Qwen2-0.5B-Instruct (default)</option>
+        <option value="Qwen2-0.5B-Instruct-q4f32_1-MLC">Qwen2-0.5B-Instruct (quantized fast)</option>
+      </select>
+      <label><input type="checkbox" id="preload-pref"> Preload on this network</label>
+      <button id="preload-btn">Preload Model</button>
+      <button id="cancel-preload-btn" style="display:none">Cancel Download</button>
+    </div>
+    <div id="model-load-container" style="display:none">
+      <div id="model-load-bar"></div>
+    </div>
+    <div id="model-load-text">Loading model…</div>
     <div id="status" class="status">Model: not loaded</div>
     <div id="messages" class="messages"></div>
     <div class="input">
