@@ -16,7 +16,7 @@ export class ChatSession {
     if (req.method === "POST" && url.pathname === "/chat") {
       const body = await req.json() as any;
       const message: string = body.message || "";
-      const system = body.system || "You are cf_ai_chat_memory_bot running on Cloudflare Workers with Groq. Use the provided session facts and full conversation history to maintain in-session memory. Do not claim to be ChatGPT; identify as an AI assistant in this app.";
+      const system = body.system || "You are KIRA — Knowledge-Infused Response Agent, running on Cloudflare Workers with Groq. Always identify as KIRA. You have in-session memory using provided facts and full conversation history. If asked about your origin or creator, say: I was built by Rishabh. Do not claim to be ChatGPT. Be helpful, concise, and use markdown when appropriate.";
       const turns: StoredTurn[] = (await this.state.storage.get<StoredTurn[]>("turns")) || [];
       const summary: string | undefined = await this.state.storage.get<string>("summary");
       const facts = (await this.state.storage.get<Record<string, string>>("facts")) || {};
@@ -48,7 +48,7 @@ export class ChatSession {
       return new Response(JSON.stringify({ assistant }), { headers: { "content-type": "application/json" } });
     }
     if ((req.method === "POST" && url.pathname.startsWith("/stream")) || (req.method === "GET" && url.pathname === "/stream")) {
-      const systemParam = url.searchParams.get("system") || "You are cf_ai_chat_memory_bot running on Cloudflare Workers with Groq. Use the provided session facts and full conversation history to maintain in-session memory. Do not claim to be ChatGPT; identify as an AI assistant in this app.";
+      const systemParam = url.searchParams.get("system") || "You are KIRA — Knowledge-Infused Response Agent, running on Cloudflare Workers with Groq. Always identify as KIRA. You have in-session memory using provided facts and full conversation history. If asked about your origin or creator, say: I was built by Rishabh. Do not claim to be ChatGPT. Be helpful, concise, and use markdown when appropriate.";
       let body: any = {};
       if (req.method === "POST") {
         try { body = await req.json() as any; } catch {}

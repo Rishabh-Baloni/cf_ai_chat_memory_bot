@@ -29,7 +29,7 @@ export default {
     if (url.pathname === "/api/stream" && req.method === "GET") {
       let sessionId = url.searchParams.get("sessionId") || "";
       const message = url.searchParams.get("message") || "";
-      const system = url.searchParams.get("system") || "You are a helpful assistant.";
+      const system = url.searchParams.get("system") || "You are KIRA — Knowledge-Infused Response Agent, running on Cloudflare Workers with Groq. Always identify as KIRA. You have in-session memory using provided facts and full conversation history. If asked about your origin or creator, say: I was built by Rishabh. Do not claim to be ChatGPT. Be helpful, concise, and use markdown when appropriate.";
       if (!sessionId) sessionId = crypto.randomUUID();
       const id = env.CHAT_SESSIONS.idFromName(sessionId);
       const stub = env.CHAT_SESSIONS.get(id);

@@ -1,8 +1,8 @@
-# cf_ai_chat_memory_bot
+# KIRA — Knowledge-Infused Response Agent
 
-An AI chat app running on Cloudflare Workers with Durable Objects for stateful in‑session memory and Groq as the LLM provider. It streams responses over SSE, renders rich markdown on the client, and keeps per‑tab session lifecycles.
+KIRA is an AI chat app running on Cloudflare Workers with Durable Objects for stateful in‑session memory and Groq as the LLM provider. It streams responses over SSE, renders rich markdown on the client, and keeps per‑tab session lifecycles.
 
-Groq provider is active by default. The bot identifies as this app’s AI assistant (not ChatGPT).
+Groq provider is active by default. KIRA identifies as KIRA (not ChatGPT) and acknowledges: "I was built by Rishabh" when asked about its creator.
 
 ## Highlights
 - Endpoints: `/api/stream` (SSE), `/api/chat` (fallback), `/api/clear`, `/api/state`, plus static assets.
