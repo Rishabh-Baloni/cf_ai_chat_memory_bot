@@ -14,4 +14,5 @@ tag = "v1"
 new_classes = ["ChatSession"]
 
 [vars]
-FREE_MODE = "true"
+USE_GROQ = "true"
+GROQ_MODEL = "llama-3.1-8b-instruct"
