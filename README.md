@@ -1,92 +1,87 @@
 # cf_ai_chat_memory_bot
 
-An AI-powered chat application built on Cloudflare Workers demonstrating core architecture patterns: Worker structure, Durable Object coordination, stateful memory, chat flow handling, prompt assembly, and a clean frontend/backend organization.
+An AI chat app running on Cloudflare Workers with Durable Objects for stateful in‑session memory and Groq as the LLM provider. It streams responses over SSE, renders rich markdown on the client, and keeps per‑tab session lifecycles.
 
-By default it runs in a free mode using a small client-side LLM in the browser, and it includes wiring to switch to Workers AI later without large code changes.
+Groq provider is active by default. The bot identifies as this app’s AI assistant (not ChatGPT).
 
 ## Highlights
-- Worker routes: `/api/chat`, `/api/clear`, `/api/state`, plus static asset serving.
-- Durable Object `ChatSession` manages per-session memory (turns + rolling summary), ordering, and rate control.
-- Prompt assembly merges system persona, session summary, recent turns, and the latest user message.
-- Frontend chat UI with session persistence and a toggle for a free, browser-based LLM.
-- Free mode avoids any paid APIs; everything runs locally.
+- Endpoints: `/api/stream` (SSE), `/api/chat` (fallback), `/api/clear`, `/api/state`, plus static assets.
+- Durable Object `ChatSession` persists turns, summary, and session facts (e.g., name) per session.
+- Prompt assembly includes system, summary, full turn history, new message, and facts.
+- Client UI renders markdown (code blocks, lists, links, tables) and shows streaming tokens.
+- Session scoped to the browser tab via `sessionStorage` (ends on tab close or Clear Memory).
 
 ## Architecture
 - Worker (`src/worker.ts`)
-  - Handles HTTP endpoints, session routing to Durable Object, and static assets.
+  - Routes requests and proxies to the Durable Object; serves `public/*`.
 - Durable Object (`src/durable/ChatSession.ts`)
-  - Stores short-term turns and maintains a rolling summary.
-  - Orchestrates the flow: recall → generate → summarize → write-back.
-  - Free mode: returns responses without invoking cloud LLMs; summary derived locally.
+  - Stores `turns`, `summary`, `facts` and orchestrates generate/summarize/write‑back.
+  - Streams via Groq (`/stream`) and persists the final assistant message.
+- Groq integration (`src/external/groq.ts`)
+  - Helper for chat completions; supports default model `openai/gpt-oss-20b` with fallback to `mixtral-8x7b-32768`.
 - Prompt builder (`src/prompt/buildPrompt.ts`)
-  - Constructs the message list for generation with system, summary, history, and the new user message.
+  - Constructs the message list with system, summary, prior turns, current user message, and facts.
 - Frontend (`public/*`)
-  - Minimal chat UI, local session storage, and optional client-side LLM via Transformers.js.
-
-## LLM Options
-- Free mode (default):
-  - Uses a small browser LLM (`Xenova/gpt2`) via CDN for text generation.
-  - Durable Object coordinates memory and session state.
-- Workers AI mode (optional):
-  - Bind Workers AI in `wrangler.toml` and call a model such as `@cf/meta/llama-3.3-8b-instruct`.
+  - Minimal chat UI that streams tokens, renders markdown, and manages session via `sessionStorage`.
 
 ## File Structure
 ```
 src/
-  worker.ts              # Worker entry and routes
-  durable/ChatSession.ts # Durable Object: chat/memory orchestration
-  prompt/buildPrompt.ts  # Prompt assembly helper
+  worker.ts              
+  durable/ChatSession.ts 
+  prompt/buildPrompt.ts  
+  external/groq.ts       
 public/
-  index.html             # UI
-  chat.js                # Chat logic; backend or browser LLM path
-  browser-llm.js         # Transformers.js pipeline (free mode)
-  styles.css             # Basic styling
-wrangler.toml            # Config: assets binding, DO, free-mode flag
-package.json             # Dev scripts: dev/build/publish/typecheck
-tsconfig.json            # TypeScript options
-.npmrc                   # Local npm cache directory
-.gitignore               # Ignore node_modules, cache, venv, etc.
+  index.html             
+  chat.js                
+  styles.css             
+wrangler.toml            
+package.json             
+tsconfig.json            
+.npmrc                   
+.gitignore               
+.dev.vars                
 ```
 
 ## Running Locally (Windows)
-- Install dependencies locally:
-  - `npm install --cache .npm-cache`
-- Start dev server:
-  - `npm run dev`
-- Open the app:
-  - `http://127.0.0.1:8787/`
-- Use the toggle “Browser LLM (free)” to keep generation local and free.
+- Install dependencies: `npm install`
+- Set local dev vars (for dev only): `.dev.vars` with `GROQ_API_KEY=...`
+- Start dev: `npm run dev`
+- Open: `http://127.0.0.1:8787/`
 
-## Switching to Workers AI (optional)
-1. Add back the AI binding in `wrangler.toml`:
-```
-[ai]
-binding = "AI"
-```
-2. In `ChatSession`, set `FREE_MODE` to `false` in `[vars]` or remove the flag.
-3. Log in and run dev remotely:
-```
-npx wrangler login
-npx wrangler dev --remote
-```
-Note: Remote dev may incur usage depending on your account.
+## Configuration
+- `wrangler.toml`
+  - Assets binding: `ASSETS` → `public/`
+  - Durable Object binding: `CHAT_SESSIONS`
+  - Free plan migration (SQLite):
+    ```toml
+    [[migrations]]
+    tag = "v1-sqlite"
+    new_sqlite_classes = ["ChatSession"]
+    ```
+  - Vars:
+    - `USE_GROQ = "true"`
+    - `GROQ_MODEL = "openai/gpt-oss-20b"`
 
-## Memory Model
-- Short-term: last N turns retained.
-- Rolling summary: refreshed periodically to constrain prompt size.
-- Clear memory: `/api/clear` endpoint and UI button.
+## Deployment (Cloudflare Workers, free)
+- Login: `npx wrangler login`
+- Set secret (once): `npx wrangler secret put GROQ_API_KEY`
+- Deploy: `npx wrangler deploy`
+- Default route: Workers.dev is enabled unless you set `workers_dev = false`.
+- After deploy, open the service in Cloudflare → `Workers & Pages` to view the live URL and logs.
 
-## Capabilities
-- LLM integration: client-side generation by default; Workers AI optional.
-- Workflow/coordination: Durable Object orchestrates steps and persists state.
-- User input: chat UI with session persistence and message streaming.
-- Memory/state: stored turns and a rolling summary per session.
+## Endpoints
+- `GET /api/stream?sessionId=&message=&system=` → SSE streaming
+- `POST /api/chat { sessionId, message, system? }` → non‑stream fallback
+- `POST /api/clear { sessionId }` → clears `turns`, `summary`, `facts`
+- `GET /api/state?sessionId=` → returns stored `turns`/`summary`
 
-## Disk Usage Rules
-- All npm cache and `node_modules` are inside this project directory (`.npm-cache`, `node_modules`). No global installs.
-- If Python utilities are added, use `python -m venv .venv` and install packages into `./.venv` only.
+## Memory & Prompts
+- Facts extraction: detects phrases like “my name is …” and stores `facts.name` for polite continuity.
+- Summary refresh: recomputed periodically to keep prompt size bounded.
+- Prompt inputs: `system`, `summary`, full history, new `message`, `facts`.
+- Identity: the bot does not claim to be ChatGPT; it’s the app’s AI assistant.
 
-## Deploy (optional)
-- Publish when ready:
-  - `npm run publish`
-- Requires a Cloudflare account; not needed for local evaluation.
+## Notes
+- Do not commit secrets; use `wrangler secret` in production and `.dev.vars` only for local development.
+- Models: defaults to `openai/gpt-oss-20b`; streaming path falls back to `mixtral-8x7b-32768` when needed.

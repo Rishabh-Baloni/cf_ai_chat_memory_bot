@@ -10,8 +10,8 @@ bindings = [
 ]
 
 [[migrations]]
-tag = "v1"
-new_classes = ["ChatSession"]
+tag = "v1-sqlite"
+new_sqlite_classes = ["ChatSession"]
 
 [vars]
 USE_GROQ = "true"
