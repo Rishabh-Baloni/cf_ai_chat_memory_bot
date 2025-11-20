@@ -2,7 +2,7 @@ const messagesEl = document.getElementById("messages");
 const inputEl = document.getElementById("text");
 const sendEl = document.getElementById("send");
 const clearEl = document.getElementById("clear");
-let sessionId = localStorage.getItem("sessionId") || "";
+let sessionId = sessionStorage.getItem("sessionId") || "";
 const clientHistory = [];
 function add(role, text) {
   const d = document.createElement("div");
@@ -20,10 +20,10 @@ async function send() {
   const placeholder = add("assistant", "");
   try {
     const url = new URL(location.origin + "/api/stream");
-    sessionId = sessionId || localStorage.getItem("sessionId") || "";
+    sessionId = sessionId || sessionStorage.getItem("sessionId") || "";
     if (!sessionId) {
       sessionId = crypto.randomUUID();
-      localStorage.setItem("sessionId", sessionId);
+      sessionStorage.setItem("sessionId", sessionId);
     }
     url.searchParams.set("sessionId", sessionId);
     url.searchParams.set("message", text);
@@ -179,6 +179,8 @@ async function clearMemory() {
   await fetch("/api/clear", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ sessionId }) });
   messagesEl.innerHTML = "";
   clientHistory.length = 0;
+  sessionStorage.removeItem("sessionId");
+  sessionId = "";
 }
 sendEl.addEventListener("click", send);
 inputEl.addEventListener("keydown", e => { if (e.key === "Enter") send(); });

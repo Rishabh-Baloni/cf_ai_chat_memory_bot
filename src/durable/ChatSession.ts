@@ -26,8 +26,8 @@ export class ChatSession {
       if (nameMatch) facts["name"] = message.substring(nameMatch.index! + 12).trim();
       else if (iAmMatch) facts["name"] = message.substring(iAmMatch.index! + 4).trim();
       await this.state.storage.put("facts", facts);
-      const recent = turns.slice(-20).map(t => ({ role: t.role, content: t.content }));
-      const messages = buildPrompt(system, summary || null, recent, message, facts);
+      const all = turns.map(t => ({ role: t.role, content: t.content }));
+      const messages = buildPrompt(system, summary || null, all, message, facts);
       let assistant = "";
       if (this.env.GROQ_API_KEY) {
         assistant = await groqChat(this.env.GROQ_API_KEY!, this.env.GROQ_MODEL || "openai/gpt-oss-20b", messages);
@@ -63,8 +63,8 @@ export class ChatSession {
       if (nameMatch2) facts["name"] = message.substring(nameMatch2.index! + 12).trim();
       else if (iAmMatch2) facts["name"] = message.substring(iAmMatch2.index! + 4).trim();
       await this.state.storage.put("facts", facts);
-      const recent = turns.slice(-20).map(t => ({ role: t.role, content: t.content }));
-      const messages = buildPrompt(systemParam, summary || null, recent, message, facts);
+      const all2 = turns.map(t => ({ role: t.role, content: t.content }));
+      const messages = buildPrompt(systemParam, summary || null, all2, message, facts);
       if (!this.env.GROQ_API_KEY) {
         const enc = new TextEncoder();
         const stream = new ReadableStream({
