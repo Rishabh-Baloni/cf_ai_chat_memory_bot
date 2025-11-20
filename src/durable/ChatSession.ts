@@ -23,7 +23,7 @@ export class ChatSession {
       const messages = buildPrompt(system, summary || null, recent, message);
       let assistant = "";
       if (this.env.GROQ_API_KEY) {
-        assistant = await groqChat(this.env.GROQ_API_KEY!, this.env.GROQ_MODEL || "mixtral-8x7b-32768", messages);
+        assistant = await groqChat(this.env.GROQ_API_KEY!, this.env.GROQ_MODEL || "openai/gpt-oss-20b", messages);
       } else {
         assistant = "Groq API key missing";
       }
@@ -62,11 +62,20 @@ export class ChatSession {
         });
         return new Response(stream, { headers: { "content-type": "text/event-stream" } });
       }
-      const r = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      const reqBody = { model: this.env.GROQ_MODEL || "openai/gpt-oss-20b", messages, stream: true, temperature: 1, max_completion_tokens: 8192, top_p: 1, reasoning_effort: "medium", stop: null };
+      let r = await fetch("https://api.groq.com/openai/v1/chat/completions", {
         method: "POST",
         headers: { "content-type": "application/json", authorization: `Bearer ${this.env.GROQ_API_KEY}` },
-        body: JSON.stringify({ model: this.env.GROQ_MODEL || "mixtral-8x7b-32768", messages, stream: true })
+        body: JSON.stringify(reqBody)
       });
+      if (!r.ok) {
+        const fallbackBody = { ...reqBody, model: "mixtral-8x7b-32768" };
+        r = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+          method: "POST",
+          headers: { "content-type": "application/json", authorization: `Bearer ${this.env.GROQ_API_KEY}` },
+          body: JSON.stringify(fallbackBody)
+        });
+      }
       if (!r.body) {
         return new Response("", { headers: { "content-type": "text/event-stream" } });
       }
@@ -97,7 +106,7 @@ export class ChatSession {
         turnsLocal.push({ role: "assistant", content: acc, ts: now });
         await this.state.storage.put("turns", turnsLocal);
         const sMessages = [{ role: "system", content: "Summarize the conversation so far concisely." }].concat(turnsLocal.slice(-20).map(t => ({ role: t.role, content: t.content })));
-        const sText = await groqChat(this.env.GROQ_API_KEY!, this.env.GROQ_MODEL || "mixtral-8x7b-32768", sMessages);
+        const sText = await groqChat(this.env.GROQ_API_KEY!, (this.env.GROQ_MODEL || "openai/gpt-oss-20b"), sMessages);
         await this.state.storage.put("summary", sText);
       })();
       return new Response(clientStream, { headers: { "content-type": "text/event-stream" } });
